@@ -95,6 +95,13 @@ def parser(tokens):
                 'value':token.get('value')
             }
 
+        if token.get('type') == 'string':
+            current = current + 1
+            return {
+                'type' : 'StringLiteral',
+                'value' : token.get('value')
+            }
+
         if (token.get('type')=='lparen'):
             current = current + 1
             node = {
@@ -123,11 +130,76 @@ def parser(tokens):
         ast['body'].append(walk())
     return ast
 
+    def traverser(ast, visitor):
+        def traverseArray(array, parent):
+            for child in arrays:
+                traverseNode(child,parent)
 
+        def traverseNode(node,parent):
+            method = visitor.get(node['type'])
+            
+            if method:
+                methof(node,parent)
 
+            if node['type'] == 'Program':
 
+                traverseArray(node['body'], node)
 
+            elif node['type'] == 'CallExpression':
 
+                traverseArray(node['body'], node)
 
+            elif (node['type'] == ('NumberLiteral') or node['type'] == 'StringLiteral'):
+                0
+            
+            else:
+                raise TypeError(node['type'])
 
+        traverseNode(ast, None)
+
+    def transformer(ast):
+        
+        newAst = {
+            'type': 'Program',
+            'body': []
+        }
+
+        oldAst = ast
+
+        ast = copy.deepcopy(oldAst)
+        ast['_context'] = newAst.get('body')
+
+        def NumberLiteralVisitor(node, parent):
+            parent['_context'].append({
+                'type':'NumberLiteral',
+                'value':node['value']
+            })
+
+        def CallExpressionVisitor(node, parent):
+            expression = {
+                'type':'CallExpression',
+                'callee': {
+                    'type':'Identifier',
+                    'name':node['name']
+                },
+                'arguments': []
+
+            }
+
+            node['_context'] = expression['arguments']
+
+            if parent['type'] != 'CallExpression':
+                expression = {
+                    'type':'ExpressionStatement',
+                    'expression': expression
+                }
+            parent['_context'].append(expression)
+
+        traverser(ast, {
+            'NumberLiteral' : NumberLiteralVisitor,
+            'CallExpression': CallExpressionVisitor
+        })
+
+        return newAst
+        
         
