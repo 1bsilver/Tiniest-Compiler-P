@@ -217,6 +217,8 @@ def codeGenerator(node):
         callee = codeGenerator(node['callee'])
         params = ', '.join([code for code in map(codeGenerator, node['arguments'])])
         return "%s(%s)" % (callee, params)
+    elif node['type'] == 'StringLiteral':
+        return '"' + node.value + '"'
     else:
         raise TypeError(node['type'])
 
