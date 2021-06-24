@@ -10,7 +10,7 @@ def tokenizer(input):
     whitespace = re.compile(r"\s");
     quote = re.compile(r"\"\[.+\]\"")
 
-    while (current < input.length()):
+    while (current < len(input)):
         char = input[current]
 
         if (char == '('):
@@ -86,6 +86,7 @@ def parser(tokens):
     current = 0
 
     def walk():
+        global current
         token = tokens[current]
 
         if (token.get('type') == 'number'):
@@ -112,7 +113,7 @@ def parser(tokens):
 
             current = current + 1
 
-            while token.get('type') != 'rparent':
+            while token.get('type') != 'rparen':
                 node['params'].append(walk())
                 token = tokens[current]
 
@@ -130,76 +131,108 @@ def parser(tokens):
         ast['body'].append(walk())
     return ast
 
-    def traverser(ast, visitor):
-        def traverseArray(array, parent):
-            for child in arrays:
-                traverseNode(child,parent)
+def traverser(ast, visitor):
+    def traverseArray(arrays, parent):
+        for child in arrays:
+            traverseNode(child,parent)
 
-        def traverseNode(node,parent):
-            method = visitor.get(node['type'])
+    def traverseNode(node,parent):
+        method = visitor.get(node['type'])
             
-            if method:
-                methof(node,parent)
+        if method:
+            method(node,parent)
 
-            if node['type'] == 'Program':
+        if node['type'] == 'Program':
 
-                traverseArray(node['body'], node)
+            traverseArray(node['body'], node)
 
-            elif node['type'] == 'CallExpression':
+        elif node['type'] == 'CallExpression':
 
-                traverseArray(node['body'], node)
+            traverseArray(node['params'], node)
 
-            elif (node['type'] == ('NumberLiteral') or node['type'] == 'StringLiteral'):
-                0
+        elif (node['type'] == ('NumberLiteral') or node['type'] == 'StringLiteral'):
+            0
             
-            else:
-                raise TypeError(node['type'])
+        else:
+            raise TypeError(node['type'])
 
-        traverseNode(ast, None)
+    traverseNode(ast, None)
 
-    def transformer(ast):
+def transformer(ast):
         
-        newAst = {
-            'type': 'Program',
-            'body': []
-        }
+    newAst = {
+        'type': 'Program',
+        'body': []
+    }
 
-        oldAst = ast
+    oldAst = ast
 
-        ast = copy.deepcopy(oldAst)
-        ast['_context'] = newAst.get('body')
+    ast = copy.deepcopy(oldAst)
+    ast['_context'] = newAst.get('body')
 
-        def NumberLiteralVisitor(node, parent):
-            parent['_context'].append({
-                'type':'NumberLiteral',
-                'value':node['value']
-            })
-
-        def CallExpressionVisitor(node, parent):
-            expression = {
-                'type':'CallExpression',
-                'callee': {
-                    'type':'Identifier',
-                    'name':node['name']
-                },
-                'arguments': []
-
-            }
-
-            node['_context'] = expression['arguments']
-
-            if parent['type'] != 'CallExpression':
-                expression = {
-                    'type':'ExpressionStatement',
-                    'expression': expression
-                }
-            parent['_context'].append(expression)
-
-        traverser(ast, {
-            'NumberLiteral' : NumberLiteralVisitor,
-            'CallExpression': CallExpressionVisitor
+    def NumberLiteralVisitor(node, parent):
+        parent['_context'].append({
+            'type':'NumberLiteral',
+             'value':node['value']
         })
 
-        return newAst
-        
+    def CallExpressionVisitor(node, parent):
+        expression = {
+            'type':'CallExpression',
+            'callee': {
+                'type':'Identifier',
+                'name': node['name']
+            },
+            'arguments': []
+
+        }
+
+        node['_context'] = expression['arguments']
+
+        if parent['type'] != 'CallExpression':
+            expression = {
+                'type':'ExpressionStatement',
+                'expression': expression
+            }
+        parent['_context'].append(expression)
+
+    traverser(ast, {
+        'NumberLiteral' : NumberLiteralVisitor,
+        'CallExpression': CallExpressionVisitor
+    })
+
+    return newAst
+
+def codeGenerator(node):
+    if node['type'] == 'Program':
+        return '\n'.join([code for code in map (codeGenerator, node['body'])])
+    elif node['type'] == 'Identifier':
+        return node['name']
+    elif node['type'] == 'NumberLiteral':
+        return node['value']
+    elif node['type'] == 'ExpressionStatement':
+        expression = codeGenerator(node['expression'])
+        return '%s;' % expression
+    elif node['type'] == 'CallExpression':
+        callee = codeGenerator(node['callee'])
+        params = ', '.join([code for code in map(codeGenerator, node['arguments'])])
+        return "%s(%s)" % (callee, params)
+    else:
+        raise TypeError(node['type'])
+
+def compiler(input_expression):
+    tokens = tokenizer(input_expression)
+    ast = parser(tokens)
+    newAst = transformer(ast)
+    output = codeGenerator(newAst)
+    return output
+
+def main():
+    input = "(add 2 (subtract 4 2))"
+    output = compiler(input)
+    print(output)
+
+if __name__ == "__main__":
+    main()
+
         
