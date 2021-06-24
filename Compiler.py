@@ -105,6 +105,7 @@ def parser(tokens):
 
         if (token.get('type')=='lparen'):
             current = current + 1
+            token = tokens[current]
             node = {
                 'type':'CallExpression',
                 'name': token.get('value'),
@@ -150,9 +151,12 @@ def traverser(ast, visitor):
 
             traverseArray(node['params'], node)
 
-        elif (node['type'] == ('NumberLiteral') or node['type'] == 'StringLiteral'):
+        elif node['type'] == ('NumberLiteral'):
             0
-            
+        
+        elif (node['type'] == 'StringLiteral'):
+            0
+
         else:
             raise TypeError(node['type'])
 
@@ -205,7 +209,7 @@ def transformer(ast):
 
 def codeGenerator(node):
     if node['type'] == 'Program':
-        return '\n'.join([code for code in map (codeGenerator, node['body'])])
+        return '\n'.join([code for code in map(codeGenerator, node['body'])])
     elif node['type'] == 'Identifier':
         return node['name']
     elif node['type'] == 'NumberLiteral':
@@ -230,7 +234,7 @@ def compiler(input_expression):
     return output
 
 def main():
-    input = "(add 2 (subtract 4 2))"
+    input = "(add 2 (subtract 6 2))"
     output = compiler(input)
     print(output)
 
